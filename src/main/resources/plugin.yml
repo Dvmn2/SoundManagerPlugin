@@ -1,0 +1,13 @@
+name: SoundManagerPlugin
+version: '${version}'
+
+main: net.dvmn2.soundmanagerplugin.SoundManagerPlugin
+api-version: '1.21'
+load: POSTWORLD
+
+authors: [ DVMN2 ]
+
+permissions:
+  soundmanager.admin:
+    description: Доступ к командам /soundmanager
+    default: op

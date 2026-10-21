@@ -1,0 +1,6 @@
+# Язык сообщений плагина: "ru", "en" или "auto".
+# "auto" — для игрока берётся его игровая локаль, для консоли — английский.
+#
+# Plugin message language: "ru", "en" or "auto".
+settings:
+  language: auto
