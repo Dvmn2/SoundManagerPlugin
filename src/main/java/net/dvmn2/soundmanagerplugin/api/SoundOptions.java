@@ -1,31 +1,36 @@
 package net.dvmn2.soundmanagerplugin.api;
 
-import java.util.Locale;
+import java.util.Objects;
 
 /**
- * Параметры запуска звука. Все времена — в миллисекундах.
- * Значения приводятся к допустимым диапазонам; при {@code endMs >= 0 && endMs <= startMs}
- * бросается {@link IllegalArgumentException}.
+ * Immutable parameters of a sound start. All times are in milliseconds.
+ * Numeric values are clamped to the allowed ranges.
  *
- * @param category категория (ползунок громкости): master, music, record, weather, block, hostile,
- *                 neutral, player, ambient, voice, ui
- * @param volume   0..10 (больше 1 — увеличивает радиус слышимости позиционных звуков)
- * @param pitch    0.5..2.0
- * @param startMs  с какого места начать (0 = с начала)
- * @param endMs    на каком месте закончить (-1 = играть до конца)
- * @param fadeInMs нарастание громкости с момента старта
- * @param fadeOutMs затухание, которое заканчивается ровно в endMs
+ * @param category  the volume slider that controls the sound
+ * @param volume    0..10 (above 1 it also increases the audible range of positional sounds)
+ * @param pitch     0.5..2.0
+ * @param startMs   offset to start from (0 = from the beginning)
+ * @param endMs     offset to stop at (-1 = play to the end)
+ * @param fadeInMs  volume rise from the moment of start
+ * @param fadeOutMs fade that ends exactly at {@code endMs}
+ * @throws IllegalArgumentException if {@code endMs >= 0 && endMs <= startMs}
+ * @throws NullPointerException     if {@code category} is null
  */
-public record SoundOptions(String category, float volume, float pitch,
+public record SoundOptions(SoundGroup category, float volume, float pitch,
                            long startMs, long endMs, long fadeInMs, long fadeOutMs) {
 
+    public static final float MAX_VOLUME = 10f;
+    public static final float MIN_PITCH = 0.5f;
+    public static final float MAX_PITCH = 2f;
+    /** Upper bound for offsets: 24 hours, milliseconds. */
     public static final long MAX_TIME_MS = 24L * 60 * 60 * 1000;
+    /** Upper bound for fades and transitions: 10 minutes, milliseconds. */
     public static final long MAX_FADE_MS = 10L * 60 * 1000;
 
     public SoundOptions {
-        category = category == null || category.isBlank() ? "master" : category.toLowerCase(Locale.ROOT);
-        volume = Float.isNaN(volume) ? 1f : Math.max(0f, Math.min(10f, volume));
-        pitch = Float.isNaN(pitch) ? 1f : Math.max(0.5f, Math.min(2f, pitch));
+        Objects.requireNonNull(category, "category");
+        volume = Float.isNaN(volume) ? 1f : Math.max(0f, Math.min(MAX_VOLUME, volume));
+        pitch = Float.isNaN(pitch) ? 1f : Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch));
         startMs = Math.max(0L, Math.min(MAX_TIME_MS, startMs));
         endMs = endMs < 0 ? -1L : Math.min(MAX_TIME_MS, endMs);
         fadeInMs = Math.max(0L, Math.min(MAX_FADE_MS, fadeInMs));
@@ -35,29 +40,29 @@ public record SoundOptions(String category, float volume, float pitch,
         }
     }
 
-    /** master, громкость 1, высота 1, с начала до конца, без fade'ов. */
+    /** Category {@link SoundGroup#MASTER}, volume 1, pitch 1, from start to end, no fades. */
     public static SoundOptions defaults() {
-        return new SoundOptions("master", 1f, 1f, 0L, -1L, 0L, 0L);
+        return new SoundOptions(SoundGroup.MASTER, 1f, 1f, 0L, -1L, 0L, 0L);
     }
 
-    public SoundOptions withCategory(String c) {
-        return new SoundOptions(c, volume, pitch, startMs, endMs, fadeInMs, fadeOutMs);
+    public SoundOptions withCategory(SoundGroup newCategory) {
+        return new SoundOptions(newCategory, volume, pitch, startMs, endMs, fadeInMs, fadeOutMs);
     }
 
-    public SoundOptions withVolume(float v) {
-        return new SoundOptions(category, v, pitch, startMs, endMs, fadeInMs, fadeOutMs);
+    public SoundOptions withVolume(float newVolume) {
+        return new SoundOptions(category, newVolume, pitch, startMs, endMs, fadeInMs, fadeOutMs);
     }
 
-    public SoundOptions withPitch(float p) {
-        return new SoundOptions(category, volume, p, startMs, endMs, fadeInMs, fadeOutMs);
+    public SoundOptions withPitch(float newPitch) {
+        return new SoundOptions(category, volume, newPitch, startMs, endMs, fadeInMs, fadeOutMs);
     }
 
-    /** Начать с позиции (мс). Если endMs уже задан — он должен быть больше. */
+    /** Starts from the offset (ms). If {@code endMs} is already set, it must be greater. */
     public SoundOptions withStart(long ms) {
         return new SoundOptions(category, volume, pitch, ms, endMs, fadeInMs, fadeOutMs);
     }
 
-    /** Закончить на позиции (мс); -1 = до конца звука. */
+    /** Stops at the offset (ms); -1 = play to the end of the sound. */
     public SoundOptions withEnd(long ms) {
         return new SoundOptions(category, volume, pitch, startMs, ms, fadeInMs, fadeOutMs);
     }

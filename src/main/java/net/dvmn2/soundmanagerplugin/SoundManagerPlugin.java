@@ -2,43 +2,39 @@ package net.dvmn2.soundmanagerplugin;
 
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.dvmn2.soundmanagerplugin.api.SoundManagerApi;
-import net.dvmn2.soundmanagerplugin.commands.SoundCommand;
+import net.dvmn2.soundmanagerplugin.command.SoundManagerCommand;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/** Composition root: wires the network layer, the public API and the command. Holds no runtime state. */
 public final class SoundManagerPlugin extends JavaPlugin {
-
-    private SoundManagerApiImpl api;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        Lang.setLanguage(getConfig().getString("settings.language", "auto"));
+        reloadSettings();
 
         SoundNetwork network = new SoundNetwork(this);
-        api = new SoundManagerApiImpl(network);
+        network.registerChannels();
 
-        // Только исходящие каналы: плагин командует модом, ответов от мода нет.
-        getServer().getMessenger().registerOutgoingPluginChannel(this, SoundNetwork.PLAY_CHANNEL);
-        getServer().getMessenger().registerOutgoingPluginChannel(this, SoundNetwork.CONTROL_CHANNEL);
-
+        SoundManagerApi api = new SoundManagerApiImpl(network);
         getServer().getServicesManager().register(SoundManagerApi.class, api, this, ServicePriority.Normal);
 
+        SoundManagerCommand command = new SoundManagerCommand(this, api);
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event ->
-                event.registrar().register(
-                        new SoundCommand(this).build().build(),
-                        "Управление звуками клиентского мода SoundManager"
-                ));
+                event.registrar().register(command.build(), "Control sounds of the SoundManager client mod"));
 
-        getLogger().info("SoundManagerPlugin включён. Команда: /soundmanager play|playat|playon|stop|pause|resume|seek|volume|pitch|check|reload");
+        getLogger().info("Enabled. Players with the SoundManager mod can be controlled with /soundmanager.");
     }
 
+    /** Re-reads config.yml and rebuilds everything derived from it. */
     public void reloadAll() {
         reloadConfig();
-        Lang.setLanguage(getConfig().getString("settings.language", "auto"));
+        reloadSettings();
     }
 
-    public SoundManagerApi getApi() {
-        return api;
+    private void reloadSettings() {
+        SoundManagerSettings settings = SoundManagerSettings.parse(getConfig(), getLogger());
+        Lang.setLanguage(settings.language());
     }
 }

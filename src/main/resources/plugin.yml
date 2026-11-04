@@ -1,4 +1,5 @@
 name: SoundManagerPlugin
+description: Controls sounds of the SoundManager client mod: start offset, end point, fades, pause, seek.
 version: '${version}'
 
 main: net.dvmn2.soundmanagerplugin.SoundManagerPlugin
@@ -8,6 +9,23 @@ load: POSTWORLD
 authors: [ DVMN2 ]
 
 permissions:
-  soundmanager.admin:
-    description: Доступ к командам /soundmanager
+  soundmanager.play:
+    description: Use /soundmanager play, playat and playon
     default: op
+  soundmanager.control:
+    description: Use /soundmanager stop, pause, resume, seek, volume and pitch
+    default: op
+  soundmanager.check:
+    description: Use /soundmanager check
+    default: op
+  soundmanager.reload:
+    description: Use /soundmanager reload
+    default: op
+  soundmanager.admin:
+    description: All administrative SoundManager permissions
+    default: op
+    children:
+      soundmanager.play: true
+      soundmanager.control: true
+      soundmanager.check: true
+      soundmanager.reload: true

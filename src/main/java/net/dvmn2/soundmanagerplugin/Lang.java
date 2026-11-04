@@ -1,5 +1,8 @@
 package net.dvmn2.soundmanagerplugin;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -7,53 +10,102 @@ import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Localised player-visible messages in MiniMessage format. Russian and English variants of every key are checked
+ * when the class is loaded. Values from players and commands are inserted only through {@link TagResolver}s.
+ */
 public final class Lang {
 
-    public enum Msg {
+    public enum Key {
         NO_TARGETS,
-        SENT,
         NO_ENTITY,
+        BAD_POSITION,
+        BAD_SOUND,
+        BAD_CATEGORY,
         BAD_RANGE,
-        RELOAD_OK,
+        SENT,
+        SENT_PARTIAL,
+        RELOADED,
         CHECK_YES,
         CHECK_NO
     }
 
-    private static final Map<Msg, String> RU = new EnumMap<>(Msg.class);
-    private static final Map<Msg, String> EN = new EnumMap<>(Msg.class);
+    private static final MiniMessage MM = MiniMessage.miniMessage();
+    private static final Map<Key, String> RU = new EnumMap<>(Key.class);
+    private static final Map<Key, String> EN = new EnumMap<>(Key.class);
 
-    private static String setting = "auto";
-
-    private static void put(Msg key, String ru, String en) {
-        RU.put(key, ru);
-        EN.put(key, en);
-    }
+    private static volatile String language = "auto";
 
     static {
-        put(Msg.NO_TARGETS, "Не удалось найти игроков.", "No matching players found.");
-        put(Msg.SENT, "Отправлено игрокам: %d. Пропущено (нет мода SoundManager): %d.",
-                "Sent to %d player(s). Skipped (no SoundManager mod): %d.");
-        put(Msg.NO_ENTITY, "Не удалось найти сущность.", "Entity not found.");
-        put(Msg.BAD_RANGE, "Конец (end) должен быть позже начала (start).", "End must be later than start.");
-        put(Msg.RELOAD_OK, "Конфиг перезагружен.", "Config reloaded.");
-        put(Msg.CHECK_YES, "У игрока %s установлен мод SoundManager.", "Player %s has the SoundManager mod.");
-        put(Msg.CHECK_NO, "У игрока %s НЕТ мода SoundManager.", "Player %s does NOT have the SoundManager mod.");
+        put(Key.NO_TARGETS,
+                "<red>Не удалось найти игроков.",
+                "<red>No matching players found.");
+        put(Key.NO_ENTITY,
+                "<red>Не удалось найти сущность.",
+                "<red>Entity not found.");
+        put(Key.BAD_POSITION,
+                "<red>Не удалось определить позицию.",
+                "<red>Could not resolve the position.");
+        put(Key.BAD_SOUND,
+                "<red>Некорректный id звука.",
+                "<red>Invalid sound id.");
+        put(Key.BAD_CATEGORY,
+                "<red>Неизвестная категория звука: <category>.",
+                "<red>Unknown sound category: <category>.");
+        put(Key.BAD_RANGE,
+                "<red>Конец (end) должен быть позже начала (start).",
+                "<red>End must be later than start.");
+        put(Key.SENT,
+                "<green>Отправлено игрокам: <sent>.",
+                "<green>Sent to <sent> player(s).");
+        put(Key.SENT_PARTIAL,
+                "<yellow>Отправлено игрокам: <sent>. "
+                        + "Пропущено (нет мода SoundManager): <skipped>.",
+                "<yellow>Sent to <sent> player(s). Skipped (no SoundManager mod): <skipped>.");
+        put(Key.RELOADED,
+                "<green>Конфигурация перезагружена.",
+                "<green>Configuration reloaded.");
+        put(Key.CHECK_YES,
+                "<green>У игрока <player> установлен мод SoundManager.",
+                "<green>Player <player> has the SoundManager mod.");
+        put(Key.CHECK_NO,
+                "<red>У игрока <player> НЕТ мода SoundManager.",
+                "<red>Player <player> does NOT have the SoundManager mod.");
+        verify();
     }
 
     private Lang() {
     }
 
-    public static void setLanguage(String value) {
-        setting = value == null ? "auto" : value.toLowerCase(Locale.ROOT);
+    private static void put(Key key, String ru, String en) {
+        RU.put(key, ru);
+        EN.put(key, en);
     }
 
-    public static String get(Msg key, CommandSender sender, Object... args) {
-        boolean ru = switch (setting) {
-            case "ru" -> true;
-            case "en" -> false;
-            default -> sender instanceof Player p && "ru".equals(p.locale().getLanguage());
+    private static void verify() {
+        for (Key key : Key.values()) {
+            if (!RU.containsKey(key) || !EN.containsKey(key)) {
+                throw new IllegalStateException("Missing translation for " + key);
+            }
+        }
+    }
+
+    /** Sets the language: {@code ru}, {@code en} or {@code auto} (blank is treated as {@code auto}). */
+    public static void setLanguage(String value) {
+        language = value == null || value.isBlank() ? "auto" : value.toLowerCase(Locale.ROOT);
+    }
+
+    /** Returns the message for the sender's language with the given placeholders applied. */
+    public static Component get(Key key, CommandSender sender, TagResolver... resolvers) {
+        return MM.deserialize(table(sender).get(key), resolvers);
+    }
+
+    private static Map<Key, String> table(CommandSender sender) {
+        return switch (language) {
+            case "ru" -> RU;
+            case "en" -> EN;
+            default -> sender instanceof Player player
+                    && "ru".equalsIgnoreCase(player.locale().getLanguage()) ? RU : EN;
         };
-        String template = (ru ? RU : EN).get(key);
-        return args.length == 0 ? template : String.format(template, args);
     }
 }
