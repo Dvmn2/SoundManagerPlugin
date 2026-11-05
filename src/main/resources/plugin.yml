@@ -1,5 +1,5 @@
 name: SoundManagerPlugin
-description: Controls sounds of the SoundManager client mod: start offset, end point, fades, pause, seek.
+description: 'Controls sounds of the SoundManager client mod: start offset, end point, fades, pause, seek.'
 version: '${version}'
 
 main: net.dvmn2.soundmanagerplugin.SoundManagerPlugin
@@ -10,19 +10,19 @@ authors: [ DVMN2 ]
 
 permissions:
   soundmanager.play:
-    description: Use /soundmanager play, playat and playon
+    description: 'Use /soundmanager play, playat and playon'
     default: op
   soundmanager.control:
-    description: Use /soundmanager stop, pause, resume, seek, volume and pitch
+    description: 'Use /soundmanager stop, pause, resume, seek, volume and pitch'
     default: op
   soundmanager.check:
-    description: Use /soundmanager check
+    description: 'Use /soundmanager check'
     default: op
   soundmanager.reload:
-    description: Use /soundmanager reload
+    description: 'Use /soundmanager reload'
     default: op
   soundmanager.admin:
-    description: All administrative SoundManager permissions
+    description: 'All administrative SoundManager permissions'
     default: op
     children:
       soundmanager.play: true
