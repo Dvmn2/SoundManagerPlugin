@@ -1,6 +1,7 @@
 package net.dvmn2.soundmanagerplugin;
 
 import net.dvmn2.soundmanagerplugin.api.SoundOptions;
+import net.dvmn2.soundmanagerplugin.util.SoundIds;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
@@ -9,7 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Encodes and sends the packets of the client mod; main thread only. Formats match {@code PlayPayload} and
@@ -47,9 +47,7 @@ public final class SoundNetwork {
     /** Protocol version of the plugin-mod packets; bumped on any format change. */
     public static final int PROTOCOL = 1;
 
-    private static final int MAX_SOUND_BYTES = 256;
     private static final int MAX_CATEGORY_BYTES = 32;
-    private static final Pattern SOUND_ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
 
     public enum PlayMode {
         GLOBAL(0), POSITION(1), ENTITY(2);
@@ -99,7 +97,7 @@ public final class SoundNetwork {
         DataOutputStream out = new DataOutputStream(bytes);
         try {
             Wire.writeVarInt(out, PROTOCOL);
-            Wire.writeString(out, sound, MAX_SOUND_BYTES);
+            Wire.writeString(out, sound, SoundIds.MAX_LENGTH);
             Wire.writeString(out, options.category().getId(), MAX_CATEGORY_BYTES);
             out.writeFloat(options.volume());
             out.writeFloat(options.pitch());
@@ -132,7 +130,7 @@ public final class SoundNetwork {
         try {
             Wire.writeVarInt(out, PROTOCOL);
             Wire.writeVarInt(out, action.id);
-            Wire.writeString(out, sound == null ? "" : sound, MAX_SOUND_BYTES);
+            Wire.writeString(out, sound == null ? "" : sound, SoundIds.MAX_LENGTH);
             out.writeLong(valueMs);
             out.writeFloat(value);
             Wire.writeVarInt(out, (int) Math.max(0L, Math.min(durationMs, SoundOptions.MAX_FADE_MS)));
@@ -148,10 +146,6 @@ public final class SoundNetwork {
     /** Normalises a sound id to {@code namespace:path}; returns null if the format is invalid or too long. */
     @Nullable
     public static String normalizeSound(@Nullable String sound) {
-        if (sound == null || sound.isBlank()) {
-            return null;
-        }
-        String id = sound.contains(":") ? sound : "minecraft:" + sound;
-        return id.length() <= MAX_SOUND_BYTES && SOUND_ID.matcher(id).matches() ? id : null;
+        return SoundIds.normalize(sound);
     }
 }

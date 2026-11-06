@@ -7,6 +7,7 @@ public final class Permissions {
     public static final String CONTROL = "soundmanager.control";
     public static final String CHECK = "soundmanager.check";
     public static final String RELOAD = "soundmanager.reload";
+    public static final String PLAYLIST = "soundmanager.playlist";
 
     private Permissions() {
     }

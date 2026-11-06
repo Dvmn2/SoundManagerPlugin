@@ -21,6 +21,9 @@ permissions:
   soundmanager.reload:
     description: 'Use /soundmanager reload'
     default: op
+  soundmanager.playlist:
+    description: 'Use /soundmanager playlist'
+    default: op
   soundmanager.admin:
     description: 'All administrative SoundManager permissions'
     default: op
@@ -29,3 +32,4 @@ permissions:
       soundmanager.control: true
       soundmanager.check: true
       soundmanager.reload: true
+      soundmanager.playlist: true

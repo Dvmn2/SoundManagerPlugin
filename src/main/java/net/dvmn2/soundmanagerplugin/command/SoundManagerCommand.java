@@ -1,9 +1,18 @@
 package net.dvmn2.soundmanagerplugin.command;
 
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.ARG_SOUND;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.ARG_TARGETS;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.has;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.hasAny;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.opt;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.optionChain;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.parseOptions;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.resolvePlayers;
+import static net.dvmn2.soundmanagerplugin.command.CommandSupport.toMs;
+
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -18,9 +27,8 @@ import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSele
 import io.papermc.paper.math.FinePosition;
 import net.dvmn2.soundmanagerplugin.Lang;
 import net.dvmn2.soundmanagerplugin.Permissions;
+import net.dvmn2.soundmanagerplugin.PlaylistManager;
 import net.dvmn2.soundmanagerplugin.SoundManagerPlugin;
-import net.dvmn2.soundmanagerplugin.SoundNetwork;
-import net.dvmn2.soundmanagerplugin.api.SoundGroup;
 import net.dvmn2.soundmanagerplugin.api.SoundManagerApi;
 import net.dvmn2.soundmanagerplugin.api.SoundOptions;
 import net.kyori.adventure.key.Key;
@@ -32,7 +40,6 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Predicate;
 
 /**
@@ -49,42 +56,34 @@ import java.util.function.Predicate;
  * /soundmanager pitch  &lt;players&gt; &lt;sound&gt; &lt;pitch&gt; [&lt;ramp seconds&gt;]
  * /soundmanager check  &lt;player&gt;
  * /soundmanager reload
+ * /soundmanager playlist ...   (see {@link PlaylistNode})
  *
  * options: [start [end [fadein [fadeout [volume [pitch [category]]]]]]]
  * </pre>
  */
 public final class SoundManagerCommand {
 
-    private static final String ARG_TARGETS = "targets";
-    private static final String ARG_SOUND = "sound";
     private static final String ARG_POS = "pos";
     private static final String ARG_ENTITY = "entity";
-    private static final String ARG_START = "start";
-    private static final String ARG_END = "end";
-    private static final String ARG_FADE_IN = "fadein";
-    private static final String ARG_FADE_OUT = "fadeout";
-    private static final String ARG_VOLUME = "volume";
-    private static final String ARG_PITCH = "pitch";
-    private static final String ARG_CATEGORY = "category";
     private static final String ARG_FADE = "fade";
     private static final String ARG_TIME = "time";
     private static final String ARG_VALUE = "value";
     private static final String ARG_RAMP = "ramp";
 
-    private static final double MILLIS_PER_SECOND = 1000.0;
-
     private final SoundManagerPlugin plugin;
     private final SoundManagerApi api;
+    private final PlaylistNode playlistNode;
 
-    public SoundManagerCommand(SoundManagerPlugin plugin, SoundManagerApi api) {
+    public SoundManagerCommand(SoundManagerPlugin plugin, SoundManagerApi api, PlaylistManager playlists) {
         this.plugin = plugin;
         this.api = api;
+        this.playlistNode = new PlaylistNode(playlists);
     }
 
     public LiteralCommandNode<CommandSourceStack> build() {
         return Commands.literal("soundmanager")
                 .requires(src -> hasAny(src, Permissions.PLAY, Permissions.CONTROL,
-                        Permissions.CHECK, Permissions.RELOAD))
+                        Permissions.CHECK, Permissions.RELOAD, Permissions.PLAYLIST))
                 .then(playNode())
                 .then(playAtNode())
                 .then(playOnNode())
@@ -96,6 +95,7 @@ public final class SoundManagerCommand {
                 .then(pitchNode())
                 .then(checkNode())
                 .then(reloadNode())
+                .then(playlistNode.build())
                 .build();
     }
 
@@ -198,53 +198,6 @@ public final class SoundManagerCommand {
 
     private static RequiredArgumentBuilder<CommandSourceStack, Key> soundArg() {
         return Commands.argument(ARG_SOUND, ArgumentTypes.key());
-    }
-
-    /**
-     * Optional positional arguments: start, end, fadein, fadeout, volume, pitch, category.
-     * The executor is attached to every link of the chain.
-     */
-    private static ArgumentBuilder<CommandSourceStack, ?> optionChain(Command<CommandSourceStack> exec) {
-        RequiredArgumentBuilder<CommandSourceStack, String> category = Commands
-                .argument(ARG_CATEGORY, StringArgumentType.word())
-                .suggests((ctx, builder) -> {
-                    String prefix = builder.getRemaining().toLowerCase(Locale.ROOT);
-                    for (SoundGroup group : SoundGroup.values()) {
-                        if (group.getId().startsWith(prefix)) {
-                            builder.suggest(group.getId());
-                        }
-                    }
-                    return builder.buildFuture();
-                })
-                .executes(exec);
-
-        RequiredArgumentBuilder<CommandSourceStack, Float> pitch = Commands
-                .argument(ARG_PITCH, FloatArgumentType.floatArg(SoundOptions.MIN_PITCH, SoundOptions.MAX_PITCH))
-                .executes(exec);
-        pitch.then(category);
-
-        RequiredArgumentBuilder<CommandSourceStack, Float> volume = Commands
-                .argument(ARG_VOLUME, FloatArgumentType.floatArg(0f, SoundOptions.MAX_VOLUME))
-                .executes(exec);
-        volume.then(pitch);
-
-        RequiredArgumentBuilder<CommandSourceStack, Double> fadeOut = Commands
-                .argument(ARG_FADE_OUT, DoubleArgumentType.doubleArg(0)).executes(exec);
-        fadeOut.then(volume);
-
-        RequiredArgumentBuilder<CommandSourceStack, Double> fadeIn = Commands
-                .argument(ARG_FADE_IN, DoubleArgumentType.doubleArg(0)).executes(exec);
-        fadeIn.then(fadeOut);
-
-        RequiredArgumentBuilder<CommandSourceStack, Double> end = Commands
-                .argument(ARG_END, DoubleArgumentType.doubleArg(-1)).executes(exec);
-        end.then(fadeIn);
-
-        RequiredArgumentBuilder<CommandSourceStack, Double> start = Commands
-                .argument(ARG_START, DoubleArgumentType.doubleArg(0)).executes(exec);
-        start.then(end);
-
-        return start;
     }
 
     // ---------- Executors ----------
@@ -381,61 +334,10 @@ public final class SoundManagerCommand {
 
     // ---------- Helpers ----------
 
-    /** Parses the optional play arguments; sends an error and returns null if they are invalid. */
-    @Nullable
-    private static SoundOptions parseOptions(CommandContext<CommandSourceStack> ctx) {
-        CommandSender sender = ctx.getSource().getSender();
-        SoundGroup group = SoundGroup.MASTER;
-        String categoryName = opt(ctx, ARG_CATEGORY, String.class, null);
-        if (categoryName != null) {
-            SoundGroup parsed = SoundGroup.fromId(categoryName);
-            if (parsed == null) {
-                sender.sendMessage(Lang.get(Lang.Key.BAD_CATEGORY, sender,
-                        Placeholder.unparsed("category", categoryName)));
-                return null;
-            }
-            group = parsed;
-        }
-        try {
-            return new SoundOptions(
-                    group,
-                    opt(ctx, ARG_VOLUME, Float.class, 1f),
-                    opt(ctx, ARG_PITCH, Float.class, 1f),
-                    toMs(opt(ctx, ARG_START, Double.class, 0.0)),
-                    toMs(opt(ctx, ARG_END, Double.class, -1.0)),
-                    toMs(opt(ctx, ARG_FADE_IN, Double.class, 0.0)),
-                    toMs(opt(ctx, ARG_FADE_OUT, Double.class, 0.0)));
-        } catch (IllegalArgumentException ex) {
-            sender.sendMessage(Lang.get(Lang.Key.BAD_RANGE, sender));
-            return null;
-        }
-    }
-
-    private static List<Player> resolvePlayers(CommandContext<CommandSourceStack> ctx) {
-        try {
-            return ctx.getArgument(ARG_TARGETS, PlayerSelectorArgumentResolver.class).resolve(ctx.getSource());
-        } catch (CommandSyntaxException ex) {
-            return List.of();
-        }
-    }
-
     @Nullable
     private static String optionalSound(CommandContext<CommandSourceStack> ctx) {
         Key key = opt(ctx, ARG_SOUND, Key.class, null);
         return key == null ? null : key.asString();
-    }
-
-    /** Value of an optional argument, or {@code def} when it was not given. */
-    private static <T> T opt(CommandContext<CommandSourceStack> ctx, String name, Class<T> type, @Nullable T def) {
-        try {
-            return ctx.getArgument(name, type);
-        } catch (IllegalArgumentException ex) {
-            return def; // the optional argument is absent
-        }
-    }
-
-    private static long toMs(double seconds) {
-        return seconds < 0 ? -1L : Math.round(seconds * MILLIS_PER_SECOND);
     }
 
     private static void report(CommandSender sender, int sent, int skipped) {
@@ -443,19 +345,6 @@ public final class SoundManagerCommand {
         sender.sendMessage(Lang.get(key, sender,
                 Placeholder.unparsed("sent", String.valueOf(sent)),
                 Placeholder.unparsed("skipped", String.valueOf(skipped))));
-    }
-
-    private static boolean has(CommandSourceStack src, String permission) {
-        return src.getSender().hasPermission(permission);
-    }
-
-    private static boolean hasAny(CommandSourceStack src, String... permissions) {
-        for (String permission : permissions) {
-            if (has(src, permission)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private interface PlaySender {

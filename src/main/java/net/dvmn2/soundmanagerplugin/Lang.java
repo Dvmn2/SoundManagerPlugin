@@ -27,7 +27,36 @@ public final class Lang {
         SENT_PARTIAL,
         RELOADED,
         CHECK_YES,
-        CHECK_NO
+        CHECK_NO,
+        PL_CREATED,
+        PL_DELETED,
+        PL_EXISTS,
+        PL_NOT_FOUND,
+        PL_BAD_NAME,
+        PL_LIMIT,
+        PL_TRACK_LIMIT,
+        PL_RUNNING,
+        PL_BAD_INDEX,
+        PL_NEEDS_LENGTH,
+        PL_TRACK_ADDED,
+        PL_TRACK_REMOVED,
+        PL_TRACK_MOVED,
+        PL_LOOP_SET,
+        PL_SHUFFLE_SET,
+        PL_STARTED,
+        PL_STARTED_PARTIAL,
+        PL_EMPTY,
+        PL_NO_PLAYERS,
+        PL_STOPPED,
+        PL_SKIPPED,
+        PL_PAUSED,
+        PL_RESUMED,
+        PL_NOT_RUNNING,
+        PL_WRONG_STATE,
+        PL_LIST_NONE,
+        PL_LIST_STOPPED,
+        PL_LIST_PLAYING,
+        PL_LIST_PAUSED
     }
 
     private static final MiniMessage MM = MiniMessage.miniMessage();
@@ -71,6 +100,94 @@ public final class Lang {
         put(Key.CHECK_NO,
                 "<red>У игрока <player> НЕТ мода SoundManager.",
                 "<red>Player <player> does NOT have the SoundManager mod.");
+        put(Key.PL_CREATED,
+                "<green>Плейлист <name> создан.",
+                "<green>Playlist <name> created.");
+        put(Key.PL_DELETED,
+                "<green>Плейлист <name> удалён.",
+                "<green>Playlist <name> deleted.");
+        put(Key.PL_EXISTS,
+                "<red>Плейлист <name> уже существует.",
+                "<red>Playlist <name> already exists.");
+        put(Key.PL_NOT_FOUND,
+                "<red>Плейлист <name> не найден.",
+                "<red>Playlist <name> not found.");
+        put(Key.PL_BAD_NAME,
+                "<red>Имя плейлиста: от 1 до <max> символов, без пробелов по краям и управляющих символов.",
+                "<red>A playlist name has 1 to <max> characters, no spaces at the ends and no control characters.");
+        put(Key.PL_LIMIT,
+                "<red>Достигнут предел плейлистов: <max>.",
+                "<red>The playlist limit is reached: <max>.");
+        put(Key.PL_TRACK_LIMIT,
+                "<red>В плейлисте не может быть больше <max> треков.",
+                "<red>A playlist cannot have more than <max> tracks.");
+        put(Key.PL_RUNNING,
+                "<red>Плейлист <name> сейчас играет. Остановите его, чтобы изменить или удалить.",
+                "<red>Playlist <name> is playing. Stop it to edit or delete it.");
+        put(Key.PL_BAD_INDEX,
+                "<red>Нет трека с таким номером.",
+                "<red>There is no track with that number.");
+        put(Key.PL_NEEDS_LENGTH,
+                "<red>Для трека без конца (end = -1) укажите длину звука в секундах, большую, чем start.",
+                "<red>A track without an end (end = -1) needs the sound length in seconds, greater than start.");
+        put(Key.PL_TRACK_ADDED,
+                "<green>Трек добавлен в плейлист <name>.",
+                "<green>Track added to playlist <name>.");
+        put(Key.PL_TRACK_REMOVED,
+                "<green>Трек удалён из плейлиста <name>.",
+                "<green>Track removed from playlist <name>.");
+        put(Key.PL_TRACK_MOVED,
+                "<green>Трек перемещён в плейлисте <name>.",
+                "<green>Track moved in playlist <name>.");
+        put(Key.PL_LOOP_SET,
+                "<green>Плейлист <name>: повтор <value>.",
+                "<green>Playlist <name>: loop <value>.");
+        put(Key.PL_SHUFFLE_SET,
+                "<green>Плейлист <name>: перемешивание <value> (действует со следующего круга).",
+                "<green>Playlist <name>: shuffle <value> (applies from the next cycle).");
+        put(Key.PL_STARTED,
+                "<green>Плейлист <name> запущен для игроков: <sent>.",
+                "<green>Playlist <name> started for <sent> player(s).");
+        put(Key.PL_STARTED_PARTIAL,
+                "<yellow>Плейлист <name> запущен для игроков: <sent>. "
+                        + "Пропущено (нет мода SoundManager): <skipped>.",
+                "<yellow>Playlist <name> started for <sent> player(s). Skipped (no SoundManager mod): <skipped>.");
+        put(Key.PL_EMPTY,
+                "<red>В плейлисте <name> нет треков.",
+                "<red>Playlist <name> has no tracks.");
+        put(Key.PL_NO_PLAYERS,
+                "<red>Нет игроков с модом SoundManager среди выбранных.",
+                "<red>None of the selected players has the SoundManager mod.");
+        put(Key.PL_STOPPED,
+                "<green>Плейлист <name> остановлен.",
+                "<green>Playlist <name> stopped.");
+        put(Key.PL_SKIPPED,
+                "<green>Плейлист <name>: следующий трек.",
+                "<green>Playlist <name>: next track.");
+        put(Key.PL_PAUSED,
+                "<green>Плейлист <name> на паузе.",
+                "<green>Playlist <name> paused.");
+        put(Key.PL_RESUMED,
+                "<green>Плейлист <name> продолжен.",
+                "<green>Playlist <name> resumed.");
+        put(Key.PL_NOT_RUNNING,
+                "<red>Плейлист <name> не запущен.",
+                "<red>Playlist <name> is not running.");
+        put(Key.PL_WRONG_STATE,
+                "<red>Плейлист <name> уже в этом состоянии.",
+                "<red>Playlist <name> is already in that state.");
+        put(Key.PL_LIST_NONE,
+                "<yellow>Плейлистов пока нет.",
+                "<yellow>There are no playlists yet.");
+        put(Key.PL_LIST_STOPPED,
+                "<gray><name>: треков <tracks>.",
+                "<gray><name>: <tracks> track(s).");
+        put(Key.PL_LIST_PLAYING,
+                "<green><name>: треков <tracks>, играет трек <current>.",
+                "<green><name>: <tracks> track(s), playing track <current>.");
+        put(Key.PL_LIST_PAUSED,
+                "<yellow><name>: треков <tracks>, пауза на треке <current>.",
+                "<yellow><name>: <tracks> track(s), paused at track <current>.");
         verify();
     }
 
